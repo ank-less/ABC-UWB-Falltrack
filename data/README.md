@@ -1,7 +1,11 @@
-# Dữ liệu cục bộ
+# Bộ dữ liệu cuộc thi
 
-Không commit dữ liệu radar hoặc nhãn trong thư mục này. Bản phát hành hiện có trên máy khởi tạo workspace tại `data/uwb_falltrack/abc2027_uwb_train_v1/`; thư mục phát hành và tệp nén được Git bỏ qua. Khi chia sẻ repo, mỗi thành viên cần lấy dữ liệu từ nguồn được phép và tự đặt dữ liệu cục bộ theo cấu trúc tương ứng.
+**Thư mục Google Drive:** [Mở thư mục dữ liệu trên Google Drive](https://drive.google.com/drive/folders/182TmF7QxRepxTcQosjwLR5O0KWgSvlgv).
 
-Bản dữ liệu trên máy hiện tại chiếm khoảng 19 GB; nhiều luồng HDF5 lớn hơn giới hạn tệp thường của GitHub. Tài liệu trong gói ghi giấy phép CC BY-NC 4.0 và hạn chế sử dụng các bản ghi nguồn LIARA. Không tải dữ liệu lên GitHub hoặc dịch vụ bên ngoài nếu chưa xác nhận quyền phân phối và chưa có yêu cầu rõ ràng.
+Quyền truy cập phụ thuộc vào cài đặt chia sẻ của chủ sở hữu Drive. Nếu link yêu cầu quyền, hãy liên hệ người quản lý thư mục để được cấp quyền cho tài khoản của bạn.
 
-Protocol challenge chính thức và nguồn cấp dữ liệu cần được xác minh độc lập; xem [`docs/challenge_spec.md`](../docs/challenge_spec.md).
+Tải dữ liệu được cấp phép về và giữ nguyên bản gốc trong `data/raw/`. Các tệp dữ liệu dung lượng lớn không được commit vào Git; repository chỉ lưu hướng dẫn này.
+
+## Quyền sử dụng
+
+Thư mục Drive là nơi nhóm chia sẻ dữ liệu, không phải xác nhận độc lập về nguồn gốc hay protocol chính thức của challenge. Trước khi sử dụng hoặc chia sẻ lại, hãy đọc README và LICENSE đi kèm dữ liệu; các tài liệu trong gói nêu giấy phép CC BY-NC 4.0 và các hạn chế liên quan đến bản ghi nguồn LIARA.

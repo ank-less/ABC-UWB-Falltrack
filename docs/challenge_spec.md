@@ -11,7 +11,7 @@ Tài liệu này là nơi ghi lại những yêu cầu chính thức của chall
 
 ## Ghi nhận từ gói dữ liệu cục bộ (2026-10-10)
 
-Máy khởi tạo workspace có gói `abc2027_uwb_train_v1` tại `data/uwb_falltrack/abc2027_uwb_train_v1/`. README và LICENSE đi kèm mô tả gói là dữ liệu train/validation UWB-FallTrack, gồm các luồng HDF5 với trường `cir`, thời gian `t` và serial radar; tài liệu cũng nêu một số chi tiết về nhãn, split và evaluator. Đây là **tuyên bố trong README/LICENSE của gói cục bộ**, chưa được đối chiếu độc lập với tài liệu challenge chính thức. Gói dữ liệu và tài liệu kèm theo nằm trong `data/` và không được đưa vào repository này; mỗi thành viên cần dùng bản dữ liệu được cấp phép. Đã kiểm tra README gói và LICENSE cục bộ ngày 2026-10-10.
+Máy khởi tạo workspace có gói `abc2027_uwb_train_v1` tại `data/uwb_falltrack/abc2027_uwb_train_v1/`. README và LICENSE đi kèm mô tả gói là dữ liệu train/validation UWB-FallTrack, gồm các luồng HDF5 với trường `cir`, thời gian `t` và serial radar; tài liệu cũng nêu một số chi tiết về nhãn, split và evaluator. Đây là **tuyên bố trong README/LICENSE của gói cục bộ**, chưa được đối chiếu độc lập với tài liệu challenge chính thức. Nhóm đã cung cấp [thư mục Google Drive](https://drive.google.com/drive/folders/182TmF7QxRepxTcQosjwLR5O0KWgSvlgv) để truy cập bản chia sẻ. Đây là nơi lưu trữ do nhóm cung cấp, không phải nguồn challenge chính thức; nội dung thư mục chưa được kiểm tra độc lập. Mỗi thành viên cần đọc README/LICENSE đi kèm và dùng bản dữ liệu được cấp phép. Đã kiểm tra README gói và LICENSE cục bộ ngày 2026-10-10.
 
 Các con số protocol, metric và quy tắc submission từ README gói không được xem là xác nhận chính thức cho tới khi ban tổ chức xác nhận hoặc có tài liệu challenge chính thức kèm theo.
 

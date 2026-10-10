@@ -2,7 +2,7 @@
 
 **Mục đích:** workspace của nhóm cho thử thách UWB-FallTrack tại ABC 2027, tập trung vào phát hiện ngã liên tục từ luồng radar UWB.
 
-**Tình trạng hiện tại:** gói dữ liệu train/validation có trên máy khởi tạo workspace nhưng không được đưa lên GitHub; xem [`data/README.md`](data/README.md). Notebook EDA và báo cáo tương ứng vẫn được giữ ngoài các commit ban đầu để hoàn thiện sau. Protocol chính thức cần được xác nhận theo [`docs/challenge_spec.md`](docs/challenge_spec.md).
+**Tình trạng hiện tại:** dữ liệu train/validation được chia sẻ qua Google Drive; xem [`data/README.md`](data/README.md) để lấy link và hướng dẫn truy cập. Dữ liệu nhị phân không được đưa vào GitHub. Notebook EDA và báo cáo tương ứng vẫn được giữ ngoài các commit ban đầu để hoàn thiện sau. Protocol chính thức cần được xác nhận theo [`docs/challenge_spec.md`](docs/challenge_spec.md).
 
 ## 1. Bối cảnh và bài toán cần giải
 
