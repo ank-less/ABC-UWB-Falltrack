@@ -1,0 +1,29 @@
+# Python environments and bytecode
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Notebook and tool caches
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# Local machine files and secrets
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Data release stays local; only this note is tracked
+/data/*
+!/data/README.md
+
+# EDA files are intentionally withheld from the initial repository
+/notebooks/eda_uwb_falltrack.ipynb
+/reports/eda/
+
+# Generated artifacts
+outputs/figures/*
+outputs/models/*
+outputs/submissions/*
