@@ -84,7 +84,7 @@ Mô tả câu hỏi nghiên cứu, dữ liệu và protocol, baseline, lựa ch�
 
 **Sản phẩm:** bản thảo và phụ lục đủ thông tin để nhóm giải thích cũng như tái lập kết quả.
 
-Phần mô tả công việc cụ thể của từng thành viên và cách phối hợp được lưu riêng trong [GUIDELINES.md](GUIDELINES.md).
+Các quy ước phối hợp chung của nhóm được lưu trong [GUIDELINES.md](GUIDELINES.md).
 
 ## 4. Quy ước làm việc
 
@@ -100,7 +100,7 @@ Phần mô tả công việc cụ thể của từng thành viên và cách ph�
 ```text
 ABC/
 ├── README.md                    # Bài toán, workflow và hướng dẫn khởi động
-├── GUIDELINES.md                # Vai trò và công việc cụ thể của 5 thành viên
+├── GUIDELINES.md                # Quy ước phối hợp chung của nhóm
 ├── .editorconfig                # Quy ước định dạng tệp
 ├── .gitignore                   # Bỏ qua môi trường, dữ liệu cục bộ và artifact sinh ra
 ├── AGENTS.md                    # Quy ước cho các thay đổi trong repository

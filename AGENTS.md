@@ -2,7 +2,7 @@
 
 ## Phạm vi dự án
 
-Đây là workspace của nhóm ABC UWB Falltrack, hướng tới bài toán phát hiện ngã liên tục từ luồng radar UWB. README mô tả mục tiêu và workflow tổng thể; `GUIDELINES.md` giữ phần phân công công việc cho 5 thành viên. Giữ nội dung phân công chi tiết ở `GUIDELINES.md`, không chuyển ngược vào README nếu người dùng chưa yêu cầu.
+Đây là workspace của nhóm ABC UWB Falltrack, hướng tới bài toán phát hiện ngã liên tục từ luồng radar UWB. README mô tả mục tiêu và workflow tổng thể; `GUIDELINES.md` giữ các quy ước phối hợp chung, không lưu phân công cá nhân.
 
 ## Nguồn sự thật về challenge
 
@@ -18,6 +18,11 @@
 - Mỗi thí nghiệm cần ghi cấu hình, seed (nếu có), split, cách tiền xử lý, metric và artifact đầu ra.
 - Giữ trục thời gian và quy ước timestamp nhất quán trong các bước cửa sổ hóa, ghép dự đoán và tạo submission.
 - Gói dữ liệu train/validation hiện có cục bộ dưới `data/uwb_falltrack/abc2027_uwb_train_v1/` và bị `.gitignore` loại khỏi repository. Không đưa dữ liệu, nhãn hoặc bản sao gói lên dịch vụ bên ngoài nếu chưa có yêu cầu rõ ràng; trước khi chia sẻ phải kiểm tra giấy phép, giới hạn dung lượng và quy định challenge.
+
+## Quy ước phối hợp và kiểm định chéo
+
+- Không tạo vai trò hoặc đầu việc riêng để kiểm tra, review hay đánh giá phần việc của thành viên khác. Mọi thành viên có thể xem các phần việc được lưu trong workspace và việc góp ý/kiểm tra chéo là cách làm chung của cả nhóm.
+- Không giao riêng một người làm evaluator. Nếu protocol chính thức yêu cầu tính metric cho thí nghiệm, ghi kết quả cùng cấu hình và artifact của thí nghiệm đó theo quy ước chung.
 
 ## Quy ước mã nguồn và tệp
 
@@ -37,5 +42,5 @@
 ## Cách thực hiện thay đổi
 
 - Giữ thay đổi tập trung vào yêu cầu hiện tại; tránh tự triển khai mô hình trước khi định dạng dữ liệu và protocol được xác nhận.
-- Khi sửa README, giữ mô tả bài toán và workflow tổng thể ở đó; đặt phân công vai trò và nhiệm vụ từng người trong `GUIDELINES.md`.
+- Khi sửa README, giữ mô tả bài toán và workflow tổng thể ở đó; giữ quy ước phối hợp chung trong `GUIDELINES.md` và không thêm phân công cá nhân vào tài liệu này.
 - Sau khi sửa, tóm tắt tệp đã đổi và trạng thái Git. Nêu rõ nếu chưa chạy kiểm thử hoặc chưa thực hiện thao tác GitHub.
