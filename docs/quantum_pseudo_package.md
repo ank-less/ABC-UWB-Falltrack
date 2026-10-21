@@ -4,7 +4,7 @@
 
 ## Thành phần
 
-- `src/abc_uwb_falltrack/quantum_features.py`: lấy sai khác CIR theo thời gian, tạo trạng thái biên độ 4-qubit riêng cho mỗi radar và tính các đặc trưng mật độ/trạng thái. Cấu hình R17 bật causal static contrast (`tau=8 s`, `gamma=2.0`) và normalized rho similarity; không bật reservoir tùy chọn.
+- `src/abc_uwb_falltrack/quantum_features.py`: lấy sai khác CIR, gom 368 range bins thành 16 bin năng lượng và amplitude-encode thành trạng thái 4-qubit thực riêng cho từng radar. R17 còn bật causal static contrast (`tau=8 s`, `gamma=2.0`), ghép chuyển động/nền thành trạng thái hybrid 5-qubit và thêm normalized rho temporal similarity. Readout nhận cả đặc trưng classical lẫn các đại lượng ma trận mật độ, entropy, fidelity và Pauli; reservoir tùy chọn không bật.
 - `src/abc_uwb_falltrack/oof.py`: đọc nhãn train, mask sự kiện bị đánh cờ, fit readout và giải mã chuỗi.
 - `scripts/predict_holdout.py`: fit lại readout trên train rồi dự đoán thư mục stream mới; chặn split validation đã dùng và không đọc nhãn holdout hay `streams_composition.csv`.
 - `configs/quantum_histgb_final_candidate_r17.yaml`: cấu hình readout HistGradientBoosting cùng decoder Ising/DP đã khóa.
@@ -28,4 +28,4 @@ Lệnh fit readout lại trên train; không cần checkpoint đã huấn luyệ
 
 R17 ghi nhận OOF mean event F1 **0.8520**, với F1@tIoU 0.1/0.3/0.5 là **0.8930/0.8663/0.7968**. Lượt diagnostic trên validation ghi nhận mean **0.6957** và F1@0.1/0.3/0.5 **0.8116/0.7536/0.5217**. Validation đã được dùng trong các lượt trước nên không còn là holdout độc lập.
 
-Audit sau đó phát hiện khoảng **74.9–78.3%** overlap theo source-time ADL giữa các fold của OOF GroupKFold theo `stream_id`. Vì thế OOF 0.8520 có thể lạc quan và không được xem là ước lượng generalization độc lập. Metric là evaluator của package dữ liệu cục bộ; protocol công khai hiện chưa xác nhận đây là công thức xếp hạng chính thức. Xem [đặc tả challenge](challenge_spec.md) và [experiment log của workspace](knowledge/Experiment%20Log.md) để biết nguồn và bối cảnh.
+Audit sau đó phát hiện khoảng **74.9–78.3%** overlap theo source-time ADL giữa các fold của OOF GroupKFold theo `stream_id`. Vì thế OOF 0.8520 có thể lạc quan và không được xem là ước lượng generalization độc lập. Metric là evaluator của package dữ liệu cục bộ; protocol công khai hiện chưa xác nhận đây là công thức xếp hạng chính thức. Xem [đặc tả challenge](challenge_spec.md) để biết trạng thái protocol.
