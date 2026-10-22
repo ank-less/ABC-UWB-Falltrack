@@ -33,6 +33,17 @@
 - Không đưa checkpoint, dự đoán sinh ra hoặc cache vào mã nguồn; các thư mục artifact tương ứng được quản lý qua `.gitignore`.
 - Viết tài liệu dự án bằng tiếng Việt, giữ nguyên các thuật ngữ kỹ thuật tiếng Anh khi cách dịch có thể gây mơ hồ.
 
+## Obsidian và ghi chú dự án
+
+- Thư mục gốc của repository này là Obsidian vault dùng chung. Khi làm việc với dự án ABC, đọc `docs/knowledge/README.md` và các ghi chú liên quan bên cạnh các tài liệu nguồn sự thật của repository.
+- Ghi chú Obsidian có thể chia sẻ phải nằm trong repository, tại `docs/knowledge/`; không dùng vault ngoài repository làm nguồn sự thật và không tạo symlink phụ thuộc đường dẫn riêng trên máy.
+- `AGENTS.md` là quy tắc bắt buộc cho agent; `GUIDELINES.md` là quy ước phối hợp nhóm. Không tạo bản sao các quy tắc này trong vault.
+- `README.md` giữ mục tiêu và workflow tổng thể; `docs/challenge_spec.md` là nguồn duy nhất cho protocol challenge, nguồn, ngày kiểm tra và trạng thái xác nhận. Ghi chú Obsidian phải liên kết tới tài liệu này thay vì sao chép các giá trị protocol có thể lệch.
+- `docs/project_guide.md` giữ hướng dẫn quy trình chung. Ghi chú Obsidian dùng cho mục tiêu, lộ trình, quyết định, nguồn tham khảo, câu hỏi, checkpoint và nhật ký thí nghiệm; không thay thế tài liệu nguồn sự thật nêu trên.
+- Ghi chú thí nghiệm phải dùng `docs/knowledge/Templates/Experiment Template.md`, ghi split, tiền xử lý, seed nếu có, metric theo protocol và artifact; tuyệt đối không chọn mô hình/ngưỡng dựa trên nhãn test.
+- Cấu hình giao diện, workspace và plugin Obsidian là cấu hình cục bộ, bị `.gitignore` loại khỏi Git. Nội dung ghi chú dùng Markdown thông thường và không được yêu cầu plugin để đọc.
+- Không ghi dữ liệu radar, nhãn, model checkpoint, dự đoán hoặc đường dẫn tuyệt đối của máy thành viên vào ghi chú được theo dõi bởi Git.
+
 ## Git và thao tác bên ngoài
 
 - Làm việc cục bộ trong repo hiện tại. Không tạo remote, tạo repository GitHub, commit, push, hoặc gửi dữ liệu lên dịch vụ bên ngoài cho tới khi người dùng yêu cầu rõ ràng.

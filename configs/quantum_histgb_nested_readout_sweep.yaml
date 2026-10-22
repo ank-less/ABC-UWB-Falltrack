@@ -1,0 +1,44 @@
+experiment_name: quantum_diff_histgb_nested_readout_sweep_20261020
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_histgb_nested_readout_sweep_20261020
+feature_cache_dir: data/processed/quantum_diff_histgb_oof_20261020_r3/feature_cache
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_target_mean_event_f1: 0.70
+
+cross_validation:
+  outer_splits: 5
+  inner_splits: 3
+  seed: 2027
+
+readout:
+  kind: hist_gradient_boosting
+  learning_rate: 0.08
+  max_iter: 120
+  max_leaf_nodes: 15
+  min_samples_leaf: 100
+  l2_regularization: 2.0
+  max_bins: 63
+  positive_weight: 5.0
+
+readout_candidates:
+  - name: base
+    overrides: {}
+  - name: fewer_leaves
+    overrides:
+      max_leaf_nodes: 7
+  - name: larger_min_leaf
+    overrides:
+      min_samples_leaf: 200
+  - name: stronger_l2
+    overrides:
+      l2_regularization: 8.0
+  - name: lower_positive_weight
+    overrides:
+      positive_weight: 3.0
+
+decoder_search:
+  logit_quantiles: [0.95, 0.975, 0.99]
+  transition_costs: [1.0, 2.0, 3.0]
+  min_duration_s: [0.8, 1.2]

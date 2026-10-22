@@ -15,6 +15,9 @@ __pycache__/
 .env.*
 !.env.example
 
+# Obsidian vault settings are local to each member's installation
+.obsidian/
+
 # Data release stays local; only this note is tracked
 /data/*
 !/data/README.md
@@ -27,3 +30,9 @@ __pycache__/
 outputs/figures/*
 outputs/models/*
 outputs/submissions/*
+
+# Local many-body experiment progress, caches, models and prediction exports
+/ABC testing/r31/
+/ABC testing/r32/
+/ABC testing/r33/
+/submissions/

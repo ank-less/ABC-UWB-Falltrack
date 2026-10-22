@@ -1,0 +1,47 @@
+experiment_name: quantum_diff_static_hybrid_final_candidate_stream_balance_r23_gamma_2_0
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_static_hybrid_final_stream_balance_r23_20261020
+feature_cache_dir: data/processed/quantum_diff_static_hybrid_final_selection_stream_balance_r23_20261020/feature_cache/gamma_2_0
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_target_mean_event_f1: 0.75
+static_background_tau_s: 8.0
+readout:
+  kind: hist_gradient_boosting
+  learning_rate: 0.08
+  max_iter: 120
+  max_leaf_nodes: 15
+  min_samples_leaf: 100
+  l2_regularization: 2.0
+  max_bins: 63
+  positive_weight: 5.0
+  stream_weight_exponent: 1.0
+static_motion_gamma: 2.0
+training:
+  split: train
+  stream_group: stream_id
+  seed: 2028
+decoder:
+  bias: 0.3260338886709797
+  transition_cost: 3.0
+  entry_cost: 3.0
+  exit_cost: 3.0
+  min_duration_s: 0.8
+  start_offset_s: -0.2
+  end_offset_s: 0.0
+  duration_profile:
+    name: adaptive_q25_q75
+    threshold_quantiles:
+    - 0.25
+    - 0.75
+    short_start_offset_s: -0.3
+    short_end_offset_s: 0.0
+    middle_start_offset_s: -0.2
+    middle_end_offset_s: -0.2
+    long_start_offset_s: -0.2
+    long_end_offset_s: -0.3
+    thresholds_s:
+    - 1.3000000000000682
+    - 2.1999999999999886
+  selection_source: quantum_diff_static_hybrid_final_selection_stream_balance_r23_20261020_gamma_2_0

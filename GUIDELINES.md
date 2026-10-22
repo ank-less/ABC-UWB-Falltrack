@@ -14,3 +14,9 @@ Tài liệu này chỉ ghi các quy ước làm việc chung, không phân công
 - Thay đổi dữ liệu hoặc cách tính metric cần được ghi lại để kết quả cũ còn được diễn giải đúng.
 - Câu hỏi chưa có đáp án trong tài liệu chính thức được ghi trong `docs/challenge_spec.md`; phân biệt thông tin đã xác nhận với giả thuyết của nhóm.
 - Lịch nội bộ chỉ được chốt sau khi nhóm kiểm tra deadline hiện hành của challenge.
+
+## Ghi chú Obsidian dùng chung
+
+- Mở thư mục gốc của repository trong Obsidian; mục lục ghi chú dự án nằm tại `docs/knowledge/README.md`.
+- Lưu ghi chú dùng chung trong Git tại `docs/knowledge/`. Cấu hình Obsidian riêng của mỗi thành viên không đưa vào repository.
+- Không nhân đôi protocol hoặc quy tắc: dùng `docs/challenge_spec.md` cho protocol, `AGENTS.md` cho quy tắc agent và `GUIDELINES.md` cho quy ước phối hợp.

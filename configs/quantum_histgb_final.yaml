@@ -1,0 +1,29 @@
+experiment_name: quantum_diff_histgb_final_20261020
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_histgb_final_20261020
+feature_cache_dir: data/processed/quantum_diff_oof_20261020_r1/feature_cache
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_target_mean_event_f1: 0.70
+
+training:
+  split: train
+  stream_group: stream_id
+  seed: 2027
+
+readout:
+  kind: hist_gradient_boosting
+  learning_rate: 0.08
+  max_iter: 120
+  max_leaf_nodes: 15
+  min_samples_leaf: 100
+  l2_regularization: 2.0
+  max_bins: 63
+  positive_weight: 5.0
+
+decoder:
+  bias: 0.3246787149565134
+  transition_cost: 1.0
+  min_duration_s: 0.8
+  selection_source: quantum_diff_histgb_oof_20261020_r2

@@ -1,0 +1,128 @@
+# R33: predeclared train-only temporal readout extension; same R32 context package.
+experiment_name: manybody_source_context_multiscale_r33
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+source_group_root: data/processed/manybody_context_cv_package_r32
+output_dir: ABC testing/r33
+submission_dir: submissions
+seed: 2028
+compute_threads: 4
+features:
+  rate_hz: 50.0
+  pool_frames: 5
+  background_tau_s: 2.0
+  analytic_window_frames: 33
+  memory_tau_s: 0.25
+  smoothing_taus_s:
+  - 0.1
+  - 0.25
+  - 0.5
+  geometry_lags_s:
+  - 0.06
+  - 0.16
+  - 0.4
+  xxz_coupling: 0.7
+  zz_anisotropy: 0.8
+  transverse_field: 0.45
+  evolution_dt: 0.35
+cross_validation:
+  outer_splits: 5
+  inner_splits: 3
+readout:
+  kind: histgb
+  step_s: 0.1
+  temporal_windows_s:
+  - 0.4
+  max_training_rows: 24000
+  max_rows_per_group: 8000
+  max_iter: 80
+  max_bins: 64
+  learning_rate: 0.07
+  min_samples_leaf: 80
+  positive_weight: 5.0
+  boundary_positive_weight: 10.0
+  onset_sigma_s: 0.18
+  offset_sigma_s: 0.18
+readout_candidates:
+- name: compact7
+  overrides:
+    max_leaf_nodes: 7
+    l2_regularization: 40.0
+- name: compact15
+  overrides:
+    max_leaf_nodes: 15
+    l2_regularization: 20.0
+- name: compact15_multiscale
+  overrides:
+    max_leaf_nodes: 15
+    l2_regularization: 20.0
+    temporal_windows_s:
+    - 0.4
+    - 1.2
+decoder:
+  timestamp_alignment: right_edge
+  min_duration_s: 0.4
+  max_duration_s: 4.0
+  gap_s: 0.2
+  duration_median_s: 1.74
+  duration_log_sigma: 0.5
+  duration_weight: 0.08
+  segment_penalty: 0.12
+decoder_candidates:
+- theta: 0.25
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.35
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.45
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.25
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.35
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.45
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.55
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.65
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.75
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.85
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.55
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.65
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.75
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.85
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.15
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.15
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+- theta: 0.95
+  boundary_weight: 0.05
+  qfi_weight: 0.0
+- theta: 0.95
+  boundary_weight: 0.15
+  qfi_weight: 0.04
+validation_target: 0.82
+validation_policy: train_only_do_not_rescore_previously_consumed_validation
+original_source_group_root: data/processed/quantum_source_group_cv_package_20261020
+context_bundles: 13

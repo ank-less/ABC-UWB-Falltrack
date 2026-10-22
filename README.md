@@ -129,6 +129,10 @@ ABC/
 └── tests/                       # Kiểm tra tự động cho các module khi được xây dựng
 ```
 
+### Ghi chú Obsidian
+
+Repository này cũng là Obsidian vault: mở thư mục gốc của repository trong Obsidian. Mục lục ghi chú dự án nằm tại [`docs/knowledge/README.md`](docs/knowledge/README.md); các ghi chú Markdown trong thư mục đó được quản lý chung bằng Git. Quy tắc bắt buộc và protocol vẫn nằm trong [`AGENTS.md`](AGENTS.md), [`GUIDELINES.md`](GUIDELINES.md) và [`docs/challenge_spec.md`](docs/challenge_spec.md).
+
 Git chỉ theo dõi `data/README.md`; dữ liệu phát hành, nhãn và dữ liệu trung gian bị bỏ qua trong `.gitignore`. Gói hiện có trên máy khởi tạo workspace khoảng 19 GB, vượt xa quy mô nên lưu trong Git thông thường. Mỗi thành viên cần dùng nguồn dữ liệu được cấp phép; kiểm tra giấy phép và quy định challenge trước khi chia sẻ dữ liệu qua bất kỳ dịch vụ nào.
 
 ## 6. Bắt đầu môi trường Python

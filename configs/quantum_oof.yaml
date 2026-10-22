@@ -1,0 +1,20 @@
+experiment_name: quantum_diff_oof_20261020_r1
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_oof_20261020_r1
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_target_mean_event_f1: 0.70
+
+cross_validation:
+  n_splits: 5
+  seed: 2027
+
+readout:
+  C: 1.0
+  max_iter: 250
+
+decoder_search:
+  logit_quantiles: [0.80, 0.90, 0.95, 0.975]
+  transition_costs: [0.0, 0.25, 0.5, 1.0]
+  min_duration_s: [0.4, 0.8]

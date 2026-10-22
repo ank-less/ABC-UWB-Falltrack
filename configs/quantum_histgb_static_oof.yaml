@@ -1,0 +1,29 @@
+experiment_name: quantum_diff_static_hybrid_oof_20261020
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_static_hybrid_oof_20261020
+feature_cache_dir: data/processed/quantum_diff_static_hybrid_nested_oof_20261020/feature_cache
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_target_mean_event_f1: 0.70
+static_background_tau_s: 8.0
+static_motion_gamma: 1.0
+
+cross_validation:
+  n_splits: 5
+  seed: 2027
+
+readout:
+  kind: hist_gradient_boosting
+  learning_rate: 0.08
+  max_iter: 120
+  max_leaf_nodes: 15
+  min_samples_leaf: 100
+  l2_regularization: 2.0
+  max_bins: 63
+  positive_weight: 5.0
+
+decoder_search:
+  logit_quantiles: [0.90, 0.95, 0.975, 0.985, 0.99, 0.995, 0.9975]
+  transition_costs: [0.5, 1.0, 1.5, 2.0, 3.0]
+  min_duration_s: [0.4, 0.6, 0.8, 1.0, 1.2, 1.5]

@@ -1,0 +1,30 @@
+experiment_name: source_group_vqc_baseline_r30_20261020
+data_root: data/processed/quantum_source_group_cv_package_20261020
+output_dir: data/processed/source_group_vqc_baseline_r30_20261020
+feature_cache_dir: data/processed/source_group_vqc_baseline_r30_20261020/feature_cache
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+static_background_tau_s: null
+
+cross_validation:
+  n_splits: 5
+  seed: 2028
+
+vqc:
+  n_qubits: 4
+  layers: 2
+  max_examples_per_class_per_group: 6
+  spsa_steps: 100
+  spsa_a: 0.08
+  spsa_c: 0.12
+  spsa_alpha: 0.602
+  spsa_gamma: 0.101
+  spsa_A: 10.0
+  init_scale: 0.1
+  prediction_batch_size: 4096
+
+decoder:
+  probability_threshold: 0.5
+  merge_gap_s: 0.2
+  min_duration_s: 0.6

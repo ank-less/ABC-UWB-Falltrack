@@ -1,0 +1,112 @@
+experiment_name: quantum_diff_static_hybrid_nested_target_floor_r27_seed2028_20261020
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_static_hybrid_nested_target_floor_r27_seed2028_20261020
+feature_cache_dir: data/processed/quantum_diff_static_hybrid_nested_rho_similarity_r16_20261020/feature_cache
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_min_f1: 0.75
+maximum_target_tiou_spread: 0.10
+inner_selection_objective: target_floor_then_spread
+static_background_tau_s: 8.0
+static_motion_gamma: 1.5
+
+cross_validation:
+  outer_splits: 5
+  inner_splits: 4
+  seed: 2028
+
+feature_candidates:
+  - name: gamma_1_5
+    overrides:
+      static_motion_gamma: 1.5
+  - name: gamma_2_0
+    overrides:
+      static_motion_gamma: 2.0
+  - name: gamma_1_5_norm_rho
+    overrides:
+      static_motion_gamma: 1.5
+      include_normalized_rho_similarity: true
+  - name: gamma_2_0_norm_rho
+    overrides:
+      static_motion_gamma: 2.0
+      include_normalized_rho_similarity: true
+  - name: gamma_1_5_qreservoir
+    overrides:
+      static_motion_gamma: 1.5
+      include_quantum_reservoir: true
+      quantum_reservoir_memory_tau_s: 0.8
+      quantum_reservoir_phase_scale: 1.5707963267948966
+      quantum_reservoir_entangler_angle: 0.39269908169872414
+  - name: gamma_2_0_qreservoir
+    overrides:
+      static_motion_gamma: 2.0
+      include_quantum_reservoir: true
+      quantum_reservoir_memory_tau_s: 0.8
+      quantum_reservoir_phase_scale: 1.5707963267948966
+      quantum_reservoir_entangler_angle: 0.39269908169872414
+  - name: gamma_1_5_norm_rho_qreservoir
+    overrides:
+      static_motion_gamma: 1.5
+      include_normalized_rho_similarity: true
+      include_quantum_reservoir: true
+      quantum_reservoir_memory_tau_s: 0.8
+      quantum_reservoir_phase_scale: 1.5707963267948966
+      quantum_reservoir_entangler_angle: 0.39269908169872414
+  - name: gamma_2_0_norm_rho_qreservoir
+    overrides:
+      static_motion_gamma: 2.0
+      include_normalized_rho_similarity: true
+      include_quantum_reservoir: true
+      quantum_reservoir_memory_tau_s: 0.8
+      quantum_reservoir_phase_scale: 1.5707963267948966
+      quantum_reservoir_entangler_angle: 0.39269908169872414
+
+readout:
+  kind: hist_gradient_boosting
+  learning_rate: 0.08
+  max_iter: 120
+  max_leaf_nodes: 15
+  min_samples_leaf: 100
+  l2_regularization: 2.0
+  max_bins: 63
+  positive_weight: 5.0
+
+readout_candidates:
+  - name: per_frame
+    overrides:
+      stream_weight_exponent: 0.0
+  - name: partial_stream_balance
+    overrides:
+      stream_weight_exponent: 0.5
+  - name: equal_stream_balance
+    overrides:
+      stream_weight_exponent: 1.0
+
+decoder_search:
+  logit_quantiles: [0.95, 0.975, 0.99]
+  transition_costs: [2.0, 3.0]
+  min_duration_s: [0.8, 1.2]
+  start_offsets_s: [-0.2]
+  end_offsets_s: [0.0]
+  duration_profiles:
+    - name: uniform
+    - name: global_end_trim_0_2
+      global_start_offset_s: -0.2
+      global_end_offset_s: -0.2
+    - name: adaptive_q25_q75
+      threshold_quantiles: [0.25, 0.75]
+      short_start_offset_s: -0.3
+      short_end_offset_s: 0.0
+      middle_start_offset_s: -0.2
+      middle_end_offset_s: -0.2
+      long_start_offset_s: -0.2
+      long_end_offset_s: -0.3
+    - name: adaptive_q25_q75_end_minus_0_1
+      threshold_quantiles: [0.25, 0.75]
+      short_start_offset_s: -0.3
+      short_end_offset_s: -0.1
+      middle_start_offset_s: -0.2
+      middle_end_offset_s: -0.3
+      long_start_offset_s: -0.2
+      long_end_offset_s: -0.4

@@ -1,0 +1,54 @@
+experiment_name: quantum_diff_static_hybrid_nested_semimarkov_r17_20261020
+data_root: data/uwb_falltrack/abc2027_uwb_train_v1
+output_dir: data/processed/quantum_diff_static_hybrid_nested_semimarkov_r17_20261020
+feature_cache_dir: data/processed/quantum_diff_static_hybrid_nested_duration_endtrim_20261020/feature_cache
+rate_hz: 50.0
+pool_frames: 5
+chunk_frames: 5000
+requested_internal_target_mean_event_f1: 0.70
+static_background_tau_s: 8.0
+static_motion_gamma: 1.5
+
+cross_validation:
+  outer_splits: 5
+  inner_splits: 4
+  seed: 2027
+
+feature_candidates:
+  - name: gamma_1_5
+    overrides:
+      static_motion_gamma: 1.5
+  - name: gamma_2_0
+    overrides:
+      static_motion_gamma: 2.0
+  - name: gamma_1_5_norm_rho
+    overrides:
+      static_motion_gamma: 1.5
+      include_normalized_rho_similarity: true
+  - name: gamma_2_0_norm_rho
+    overrides:
+      static_motion_gamma: 2.0
+      include_normalized_rho_similarity: true
+
+readout:
+  kind: hist_gradient_boosting
+  learning_rate: 0.08
+  max_iter: 120
+  max_leaf_nodes: 15
+  min_samples_leaf: 100
+  l2_regularization: 2.0
+  max_bins: 63
+  positive_weight: 5.0
+
+decoder_search:
+  method: causal_semimarkov
+  logit_quantiles: [0.95, 0.99]
+  entry_costs: [3.0]
+  exit_costs: [2.0, 3.0]
+  duration_penalties: [0.0, 0.5, 1.0]
+  thresholds_on: [0.40, 0.55]
+  threshold_off_ratio: 0.6
+  min_duration_s: [0.8]
+  max_duration_s: 8.0
+  start_offset_s: -0.2
+  end_offset_s: 0.0
