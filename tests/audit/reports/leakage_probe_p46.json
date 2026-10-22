@@ -1,0 +1,34 @@
+{
+  "pipeline": "p46/p47/p48",
+  "feature_set": "21_clean + 6_range_centroid",
+  "n_pre_windows": 184,
+  "n_adl_windows": 3549,
+  "probe1_auc_all27f": 0.9885,
+  "probe1_by_group": {
+    "f_mean": 0.9535,
+    "f_std": 0.9755,
+    "f_max": 0.9643,
+    "f_delta": 0.9306,
+    "f_peak_t": 0.8524,
+    "t_mean": 0.7208,
+    "t_spread": 0.9254,
+    "centroid_shift": 0.7634,
+    "centroid_curve": 0.6508
+  },
+  "probe2_silhouette": 0.3297,
+  "probe2_macro_f1": 0.8879,
+  "verdict": "FAIL",
+  "fails": [
+    "HIGH RISK: f_mean AUC=0.954 (>0.90)",
+    "HIGH RISK: f_std AUC=0.976 (>0.90)",
+    "HIGH RISK: f_max AUC=0.964 (>0.90)",
+    "HIGH RISK: f_delta AUC=0.931 (>0.90)",
+    "FAIL:      f_peak_t AUC=0.852 (>0.65)",
+    "FAIL:      t_mean AUC=0.721 (>0.65)",
+    "HIGH RISK: t_spread AUC=0.925 (>0.90)",
+    "FAIL:      centroid_shift AUC=0.763 (>0.65)",
+    "FAIL:      centroid_curve AUC=0.651 (>0.65)",
+    "FAIL ALL-27f: AUC=0.988 (>0.65)",
+    "FAIL Probe2: macro_f1=0.888 (>0.45)"
+  ]
+}

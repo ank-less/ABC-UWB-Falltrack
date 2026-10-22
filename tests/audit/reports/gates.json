@@ -1,0 +1,20 @@
+{
+  "gate_p22": false,
+  "gate_p22_frac": 0.214,
+  "gate_p26": true,
+  "gate_p26_frac": 1.0,
+  "gate_p27": true,
+  "gate_p27_frac": 0.988,
+  "n_fn": 83,
+  "n_fp": 14,
+  "n_low_iou": 24,
+  "stats": {
+    "fall_dur_p5": 1.1,
+    "fall_dur_p50": 1.82,
+    "fall_dur_p95": 3.685,
+    "min_center_gap_s": 10.14,
+    "median_center_gap_s": 81.91,
+    "flagged_positive_count": 173,
+    "stage1_pooling": "sum"
+  }
+}

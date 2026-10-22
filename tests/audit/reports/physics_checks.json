@@ -1,0 +1,19 @@
+{
+  "axis_layout": "range_368",
+  "axis_layout_reason": "many negatives=49.981% → raw range profile",
+  "has_negative_values": true,
+  "negative_fraction": 0.4998121219103784,
+  "corr_halves": 0.8528,
+  "corr_even_odd": 0.9061,
+  "smoothness_368": 0.000131,
+  "smoothness_iq_concat": 0.000125,
+  "smoothness_iq_interl": 0.000286,
+  "native_rate_hz_estimate": 37.1,
+  "repeated_frame_fraction": 0.2587,
+  "interpolated_frame_fraction": 0.1653,
+  "native_rate_warning": false,
+  "radar_sync": true,
+  "median_lag_s": 0.0,
+  "iqr_lag_s": 2.575,
+  "n_falls_checked_sync": 10
+}
