@@ -11,5 +11,6 @@ Các lệnh chạy từ thư mục gốc của repo. Mọi script đều có `--
 | `evaluate_predictions.py` | Chấm một file submission bằng evaluator chính thức |
 | `make_eda_report.py` | Hình và số liệu cho báo cáo EDA (NV2) |
 | `make_results_report.py` | Hình và số liệu cho báo cáo kết quả (NV3), đọc từ thư mục run |
+| `diagnose_fold_ensemble.py` | Chẩn đoán: so phân bố score của model cuối với trung bình các model fold trên val (đọc nhãn val, không dùng để chọn) |
 
 Tài liệu đầy đủ: [`docs/baseline_pipeline.md`](../docs/baseline_pipeline.md).

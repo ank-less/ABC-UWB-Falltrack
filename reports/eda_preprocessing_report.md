@@ -13,7 +13,7 @@ Notebook đi kèm: [`notebooks/01_eda_preprocessing.ipynb`](../notebooks/01_eda_
 
 **Nguyên tắc.** Thống kê mô tả (đếm, thời lượng) dùng cả train lẫn val. Mọi phân tích tín hiệu và đặc trưng chỉ dùng **train**, để val không ảnh hưởng tới các lựa chọn thiết kế. Thư mục `segments/` (bản ghi nguồn LIARA) không được đọc, vì README của gói cấm dùng bản ghi nguồn để train hoặc suy luận.
 
-**Nguồn dữ liệu.** Số liệu và hình trong báo cáo này được nhóm tính và vẽ từ bộ dữ liệu ABC 2027 UWB-FallTrack (`abc2027_uwb_train_v1`), © 2026 LIARA Laboratory, Université du Québec à Chicoutimi, phát hành theo giấy phép [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Báo cáo không chứa bản sao dữ liệu hay nhãn và chỉ dùng cho mục đích phi thương mại.
+**Nguồn dữ liệu.** Số liệu và hình trong báo cáo này được nhóm tính và vẽ từ bộ dữ liệu ABC 2027 UWB-FallTrack (`abc2027_uwb_train_v1`), © 2026 LIARA Laboratory, Université du Québec à Chicoutimi, phát hành theo giấy phép [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Báo cáo không chứa dữ liệu radar thô. Tuy vậy, một số số liệu và hình **có thông tin nhãn** ở dạng tổng hợp hoặc minh họa: phân bố thời lượng và loại cú ngã, thời điểm của một cú ngã mẫu (`example_fall` trong `eda_stats.json`), và trục thời gian nhãn trong các hình ví dụ. Báo cáo chỉ dùng cho mục đích phi thương mại.
 
 ---
 
@@ -196,7 +196,7 @@ Các đặc trưng gom qua các radar (max/mean) mạnh nhất, vì cú ngã th�
 | Không ngã, chứa chỗ nối giữa hai đoạn không phải ngã | 5 440 | −5,35 | −4,15 |
 | Ngã (dương) | 3 328 | −3,85 | −2,98 |
 
-Bản thân crossfade 0,2 s **không** trông giống một cú ngã trong `diff_energy`. Tuy vậy, phần dư EMA trong `bg_energy` kéo dài vài giây sau chỗ nối (mục 5.2). NV3 đo được rằng 62,5% báo động giả (OOF train) rơi vào vùng 3 s sau một chỗ nối, trong khi vùng này chỉ chiếm 27% thời lượng.
+Bản thân crossfade 0,2 s **không** trông giống một cú ngã trong `diff_energy`. Tuy vậy, phần dư EMA trong `bg_energy` kéo dài vài giây sau chỗ nối (mục 5.2). NV3 đo được rằng 63% báo động giả (OOF train) rơi vào vùng 3 s sau một chỗ nối, trong khi vùng này chỉ chiếm 27% thời lượng.
 
 ### 8.2 Vị trí
 
@@ -212,7 +212,7 @@ Trọng tâm range của chuyển động trong cửa sổ ngã gần radar hơn
 2. Kiểm tra bắt buộc trước khi train: shape `(3, ·, 368)`, float32, bước 0,02 s, đơn điệu, NaN/Inf, nhãn nằm trong luồng, composition đầy đủ.
 3. Trừ nền bằng EMA nhân quả với τ = 3 s; tính `bg_energy` và `diff_energy` theo từng radar và lấy log10.
 4. Cửa sổ 1 s, bước 0,2 s; nhãn theo chồng lấn; loại cửa sổ mơ hồ khỏi tập huấn luyện; cú ngã bị gắn cờ vẫn là dương khi train.
-5. Chia split chính thức; CV bên trong train chia theo `subject_group`, có purge cửa sổ vắt qua hai fold.
+5. Chia split chính thức; CV bên trong train chia theo `subject_group`. Cửa sổ vắt qua hai fold bị loại khỏi tập train của cả hai fold, và không được chấm out-of-fold.
 6. Không dùng `segments/`; không dùng đặc trưng vị trí (mặc định).
 
 ## 10. Câu hỏi mở và rủi ro

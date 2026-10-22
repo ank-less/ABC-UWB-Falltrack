@@ -99,3 +99,13 @@ def test_cli_train_then_evaluate(synthetic_cfg, tmp_path):
     )
     assert scored.returncode == 0, scored.stderr
     assert json.loads(scored.stdout)["source"] == "provisional"
+    diagnostic = subprocess.run(
+        [sys.executable, str(REPO / "scripts" / "diagnose_fold_ensemble.py"), "--run-dir", str(run_dir)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+    )
+    assert diagnostic.returncode == 0, diagnostic.stderr
+    result = json.loads((run_dir / "fold_ensemble_diagnostic.json").read_text())
+    assert result["final_model"]["matches_saved_events"]
+    assert 0.0 <= result["fold_mean"]["fraction_at_or_above_threshold"] <= 1.0

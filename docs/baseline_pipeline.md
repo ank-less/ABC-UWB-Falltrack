@@ -26,6 +26,7 @@ python scripts/fetch_data.py --subset all     # khoảng 4,6 GB; --subset smoke 
 | Đổi một tham số mà không sửa file | `--override windowing.duration_seconds=2.0` (dùng được nhiều lần) |
 | Test tự động | `python -m pytest -q` |
 | Hình và số liệu cho báo cáo | `python scripts/make_eda_report.py`, `python scripts/make_results_report.py --run-dir <run>` |
+| Chẩn đoán lệch ngưỡng giữa model fold và model cuối | `python scripts/diagnose_fold_ensemble.py --run-dir <run>` |
 
 Mọi đường dẫn trong config là đường dẫn tương đối, tính từ thư mục chạy lệnh (gốc repo). Các lệnh chạy được trên Windows PowerShell, Linux và Colab. Notebook Colab: [`notebooks/02_baseline_colab.ipynb`](../notebooks/02_baseline_colab.ipynb).
 
@@ -61,12 +62,12 @@ src/abc_uwb_falltrack/
   eda.py             phân tích cho báo cáo NV2
   synthetic.py       dữ liệu tổng hợp cho test
 scripts/             CLI (mỗi script đều có --help)
-tests/               41 test (pytest), chủ yếu trên dữ liệu tổng hợp
+tests/               44 test (pytest), chủ yếu trên dữ liệu tổng hợp
 ```
 
 ## 4. Split và các hàng rào chống rò rỉ
 
-**Split chính thức** (`split.strategy: official`): train dùng để học và chọn tham số. Val chỉ được chấm **một lần**, sau khi mọi thứ đã được cố định.
+**Split chính thức** (`split.strategy: official`): train dùng để học và chọn tham số. Val không được dùng ở bất kỳ bước fit hay bước chọn nào. Tuy vậy, mỗi run vẫn chấm val cho cả ba mô hình, và nhóm đã xem điểm val của nhiều run (baseline và các ablation). Vì vậy val là tập **development**, không còn là holdout sạch. Điểm cuối cùng chỉ đáng tin trên test ẩn.
 
 **Cross-validation bên trong train theo người.** Các luồng được ghép từ những bản ghi nguồn dùng chung: một file ADL nguồn có mặt trong 2–13 luồng train, mỗi người ngã có mặt trong 4–12 luồng. Vì vậy chia fold theo `stream_id` sẽ rò rỉ. Nhóm của mỗi segment được suy ra từ đường dẫn nguồn trong `streams_composition.csv`:
 
@@ -80,9 +81,12 @@ Giả thuyết "k và n là mã người" khớp với dữ liệu: các mã nà
 1. một `stream_id` có mặt ở hai split chính thức;
 2. một `subject_group` cấp dữ liệu cho luồng của hai split chính thức;
 3. một nhóm nằm ở hai fold;
-4. model của fold k được train bằng một cửa sổ có chạm tới segment của fold k. Đây là bước **purge**: cửa sổ nằm vắt qua chỗ nối giữa hai người bị loại khỏi tập train của cả hai fold;
-5. tập fit cuối cùng có cửa sổ không thuộc train;
-6. đặc trưng của val không khớp schema đặc trưng đã train.
+4. model của fold k được train bằng một cửa sổ có chạm tới segment của fold k. Đây là bước **purge** phía train: cửa sổ nằm vắt qua chỗ nối giữa hai người bị loại khỏi tập train của cả hai fold;
+5. một cửa sổ held-out của fold k chạm tới segment của fold khác.
+6. tập fit cuối cùng có cửa sổ không thuộc train;
+7. đặc trưng của val không khớp schema đặc trưng đã train.
+
+**Cửa sổ vắt qua hai fold không có score OOF.** Một cửa sổ chạm segment của hai fold j và k không có mô hình fold nào "sạch" để chấm nó: model của fold k đã học các cửa sổ chỉ nằm trong fold j, và một số cửa sổ đó dùng chung frame với nó. Vì vậy cửa sổ này để trống (NaN) trong score OOF, và hậu xử lý coi nó là cửa sổ bị thiếu. Trên train có 6 822 cửa sổ như vậy (6,1%). Chúng vẫn được dùng để train model của fold mà chúng không chạm tới. Phiên bản trước có lỗi rò rỉ ở đây: nó gán cửa sổ này cho fold chiếm đa số và chấm như cửa sổ held-out bình thường.
 
 **Các bước có fit.** Imputer và scaler nằm trong sklearn `Pipeline`, nên chỉ fit trên các dòng của tập train tương ứng. Trừ nền EMA là bộ lọc nhân quả, không fit và không trộn các luồng. Threshold và hậu xử lý được chọn trên score **out-of-fold của train**.
 
@@ -123,12 +127,17 @@ Không oversampling (chỉ dùng class weight). Seed là 2027. Nếu một tập
 
 ## 8. Ngưỡng và hậu xử lý
 
-Score cửa sổ được làm mượt (trung bình trượt có tâm, độ rộng k), so ngưỡng, rồi gom thành run các cửa sổ liên tiếp. Run ngắn hơn `minimum_positive_windows` bị bỏ. Khoảng của sự kiện là `[tâm cửa sổ đầu − stride/2, tâm cửa sổ cuối + stride/2]`. Các sự kiện cách nhau ≤ `merge_gap` được gộp; sự kiện ngắn hơn `minimum_event_duration` bị bỏ; có thêm cooldown, rồi cắt cho nằm gọn trong luồng.
+Cửa sổ không có score (NaN) bị bỏ trước. Score còn lại được làm mượt (trung bình trượt có tâm, độ rộng k) trên từng đoạn `w_index` liên tục, nên không bắc qua cửa sổ bị thiếu. Sau đó score được so với ngưỡng và gom thành run các cửa sổ liên tiếp. Run ngắn hơn `minimum_positive_windows` bị bỏ. Khoảng của sự kiện là `[tâm cửa sổ đầu − stride/2, tâm cửa sổ cuối + stride/2]`. Các sự kiện cách nhau ≤ `merge_gap` được gộp; sự kiện ngắn hơn `minimum_event_duration` bị bỏ; có thêm cooldown, rồi cắt cho nằm gọn trong luồng.
 
 - `score` của sự kiện là score làm mượt cao nhất trong sự kiện.
 - `t_alarm` là thời điểm kết thúc cửa sổ đầu tiên vượt ngưỡng.
 
 Toàn bộ lưới tham số (ngưỡng × làm mượt × số cửa sổ tối thiểu × gộp × độ dài tối thiểu × cooldown) được chấm bằng **f1_mean chính thức trên dự đoán out-of-fold của train**. Kết quả lưu ở `postprocess_grid_results.csv` và `threshold_sensitivity.csv`.
+
+Hai điểm cần lưu ý:
+
+- Điểm OOF tốt nhất vừa là tiêu chí chọn trong 144 tổ hợp, vừa là con số được báo cáo, nên nó hơi lạc quan. Muốn có ước lượng không lệch thì cần nested CV (chọn hậu xử lý ở vòng trong, chấm ở vòng ngoài).
+- Ngưỡng được chọn trên score của các model fold (mỗi model học khoảng 2/3 số người), rồi áp lên model cuối học toàn bộ train. `scripts/diagnose_fold_ensemble.py --run-dir <run>` đo độ lệch giữa hai phân bố score này trên val. Script đọc nhãn val, nên kết quả chỉ để chẩn đoán, không dùng để chọn.
 
 ## 9. Metric
 
@@ -157,7 +166,7 @@ Thêm vào đó:
 
 `outputs/experiments/<YYYYmmdd-HHMMSS>_<name>/` (không bao giờ ghi đè run cũ):
 
-- **Cấu hình và môi trường:** `resolved_config.yaml`, `environment.json` (Python, thư viện, git commit/branch/dirty), `runtime.json`, `warnings.json`, `run.log`.
+- **Cấu hình và môi trường:** `resolved_config.yaml`, `environment.json` (Python, thư viện, git commit/branch; `dirty` chỉ xét file đã được Git theo dõi, kèm danh sách file đã sửa và file chưa theo dõi), `runtime.json`, `warnings.json`, `run.log`. Run dùng cho báo cáo phải có `dirty: false`, để truy ngược được đúng commit.
 - **Dữ liệu và split:** `data_validation.json`, `manifest_snapshot.csv`, `segments_snapshot.csv`, `split_assignments.csv` (luồng → split, nhóm → split/fold, seed, khóa group), `feature_schema.json`.
 - **Model và tham số đã chọn:** `models/<model>.joblib`; `selection.json` (tham số model, ngưỡng, hậu xử lý, dữ liệu dùng để chọn).
 - **Bảng metric:** `fold_metrics.csv`, `postprocess_grid_results.csv`, `threshold_sensitivity.csv`, `pr_curve_oof_<model>.csv`, `learning_curve.csv`.

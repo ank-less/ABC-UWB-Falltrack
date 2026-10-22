@@ -197,7 +197,9 @@ def main(argv: list[str] | None = None) -> int:
         folder = Path(folder)
         other = json.loads((folder / "final_metrics.json").read_text(encoding="utf-8"))
         cfg = yaml.safe_load((folder / "resolved_config.yaml").read_text(encoding="utf-8"))
+        git = json.loads((folder / "environment.json").read_text(encoding="utf-8")).get("git") or {}
         ablations[folder.name] = {
+            "git": {"commit": git.get("commit"), "dirty": git.get("dirty")},
             "changes": {"background_tau_seconds": cfg["preprocessing"]["background_tau_seconds"], "series": cfg["features"]["series"]},
             "selected_model": other["selected_model"],
             "models": model_rows(other)[["model", "train_oof_f1_mean", "val_f1_mean", "val_f1@0.5", "window_pr_auc_val"]].to_dict(orient="records"),
@@ -223,6 +225,9 @@ def main(argv: list[str] | None = None) -> int:
         "event_by_stream": holdout.get("event_by_stream"),
         "ablations": ablations,
     }
+    diagnostic = run / "fold_ensemble_diagnostic.json"
+    if diagnostic.exists():
+        payload["fold_ensemble_diagnostic"] = json.loads(diagnostic.read_text(encoding="utf-8"))
     write_json(Path(args.out), payload)
     print(table[["model", "train_insample_f1_mean", "train_oof_f1_mean", "val_f1_mean", "val_f1@0.5"]].round(3).to_string(index=False))
     print(json.dumps(joins, indent=1))
