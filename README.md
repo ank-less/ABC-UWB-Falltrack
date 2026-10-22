@@ -4,6 +4,18 @@
 
 **Tình trạng hiện tại:** dữ liệu train/validation được chia sẻ qua Google Drive; xem [`data/README.md`](data/README.md) để lấy link và hướng dẫn truy cập. Dữ liệu nhị phân không được đưa vào GitHub. Notebook EDA và báo cáo tương ứng vẫn được giữ ngoài các commit ban đầu để hoàn thiện sau. Protocol chính thức cần được xác nhận theo [`docs/challenge_spec.md`](docs/challenge_spec.md).
 
+## Baseline và báo cáo (branch `sangkhoi`)
+
+- Pipeline baseline (tài liệu kỹ thuật): [`docs/baseline_pipeline.md`](docs/baseline_pipeline.md). Protocol đã xác nhận: [`docs/challenge_spec.md`](docs/challenge_spec.md).
+- Báo cáo EDA và tiền xử lý (NV2): [`reports/eda_preprocessing_report.md`](reports/eda_preprocessing_report.md), notebook [`notebooks/01_eda_preprocessing.ipynb`](notebooks/01_eda_preprocessing.ipynb).
+- Báo cáo kết quả baseline (NV3): [`reports/baseline_results_report.md`](reports/baseline_results_report.md), notebook Colab [`notebooks/02_baseline_colab.ipynb`](notebooks/02_baseline_colab.ipynb).
+
+```bash
+python -m pip install -e ".[analysis,test]"
+python scripts/fetch_data.py --subset all
+python scripts/run_baseline.py --config configs/baseline.yaml
+```
+
 ## 1. Bối cảnh và bài toán cần giải
 
 UWB-FallTrack đặt ra bài toán **Continuous Fall Detection in UWB Radar Streams**: xây dựng một hệ thống có thể theo dõi luồng dữ liệu radar UWB theo thời gian và nhận ra khi nào một sự kiện ngã xảy ra. Một thông báo tổng quan về ABC 2027 mô tả thử thách theo hướng này và cho biết challenge do Université du Québec à Chicoutimi (UQAC) tổ chức; thông báo đó là điểm xuất phát để nhóm hiểu mục tiêu, còn quy định và tài liệu chính thức của ban tổ chức sẽ quyết định cách làm và cách nộp cuối cùng. [Thông báo tổng quan ABC 2027](https://www.informatika.unimal.ac.id/berita/abc-2027-challenges-peluang-kompetisi-computer-vision-dan-artificial-intelligence-tingkat-internasional) · [Trang ABC Research](https://abc-research.github.io/)
