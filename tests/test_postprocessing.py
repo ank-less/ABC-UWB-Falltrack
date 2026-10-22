@@ -78,3 +78,17 @@ def test_smoothing_keeps_length_and_constant_signal():
     assert len(smooth_scores(values, 3)) == 5
     assert np.allclose(smooth_scores(np.ones(7), 3), 1.0)
     assert np.allclose(smooth_scores(values, 1), values)
+
+
+def test_smoothing_stops_at_missing_windows():
+    values = np.array([0.0, 0.0, 1.0, 1.0])
+    assert np.allclose(smooth_scores(values, 3, w_index=np.array([0, 1, 5, 6])), values)
+    assert not np.allclose(smooth_scores(values, 3), values)
+
+
+def test_unscored_windows_split_events_and_are_not_smoothed_over():
+    scores = [1, 1, 1, np.nan, 1, 1, 1]
+    events = run(scores, smoothing_windows=3)
+    assert len(events) == 2
+    assert all(e["score"] == 1.0 for e in events)
+    assert run([np.nan, np.nan]) == []

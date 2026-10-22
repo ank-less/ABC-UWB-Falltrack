@@ -48,14 +48,24 @@ def postprocess_grid(cfg: dict) -> list[PostprocessParams]:
     ]
 
 
-def smooth_scores(scores: np.ndarray, width: int) -> np.ndarray:
-    """Centred moving average over ``width`` windows (1 = unchanged); edges use fewer windows."""
+def smooth_scores(scores: np.ndarray, width: int, w_index: np.ndarray | None = None) -> np.ndarray:
+    """Centred moving average over ``width`` windows (1 = unchanged); edges use fewer windows.
+
+    With ``w_index``, each block of consecutive indices is smoothed on its own, so the
+    average never reaches across a missing window.
+    """
     scores = np.asarray(scores, dtype=np.float64)
     if width <= 1 or len(scores) == 0:
         return scores.copy()
+    if w_index is not None:
+        breaks = np.flatnonzero(np.diff(np.asarray(w_index)) != 1) + 1
+        if len(breaks):
+            return np.concatenate([smooth_scores(block, width) for block in np.split(scores, breaks)])
     kernel = np.ones(int(width))
-    total = np.convolve(scores, kernel, mode="same")
-    count = np.convolve(np.ones_like(scores), kernel, mode="same")
+    # "full" then slice: "same" would return len(kernel) values for a block shorter than it.
+    offset = (int(width) - 1) // 2
+    total = np.convolve(scores, kernel, mode="full")[offset : offset + len(scores)]
+    count = np.convolve(np.ones_like(scores), kernel, mode="full")[offset : offset + len(scores)]
     return total / count
 
 
@@ -77,13 +87,17 @@ def scores_to_events(
     start within ``cooldown_seconds`` of the previous kept event -> clip to the stream.
     ``score`` is the highest smoothed score in the event; ``t_alarm`` is the end of the
     first window above the threshold (the earliest time the alarm could be raised).
+    A window whose score is NaN (not scored, e.g. an out-of-fold window that straddles
+    two folds) is treated as missing: smoothing and runs both stop at it.
     """
-    t_start = np.asarray(t_start, dtype=np.float64)
-    t_end = np.asarray(t_end, dtype=np.float64)
-    w_index = np.asarray(w_index)
+    scored = np.isfinite(np.asarray(scores, dtype=np.float64))
+    t_start = np.asarray(t_start, dtype=np.float64)[scored]
+    t_end = np.asarray(t_end, dtype=np.float64)[scored]
+    w_index = np.asarray(w_index)[scored]
+    scores = np.asarray(scores, dtype=np.float64)[scored]
     if len(t_start) == 0:
         return []
-    smoothed = smooth_scores(scores, params.smoothing_windows)
+    smoothed = smooth_scores(scores, params.smoothing_windows, w_index)
     active = smoothed >= params.threshold
     centres = 0.5 * (t_start + t_end)
     stride = float(np.median(np.diff(t_start))) if len(t_start) > 1 else float(t_end[0] - t_start[0])

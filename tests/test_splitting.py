@@ -4,13 +4,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from abc_uwb_falltrack.experiment import attach_folds, extract_split, prepare_dataset
+from abc_uwb_falltrack.experiment import attach_folds, cross_validate, extract_split, prepare_dataset
 from abc_uwb_falltrack.manifest import subject_group
 from abc_uwb_falltrack.splitting import (
     assign_group_folds,
     check_fold_assignment,
     official_assignment,
     purged_training_mask,
+    straddling_windows,
     window_fold_membership,
 )
 from abc_uwb_falltrack.validation import LeakageError, check_disjoint, check_group_leakage
@@ -72,6 +73,22 @@ def test_window_membership_and_purge():
         assert not touches[allowed, k].any()
         assert not np.any(allowed & (fold == k))
     assert fold[0] == 0 and fold[-1] == 2
+
+
+def test_windows_straddling_two_folds_get_no_out_of_fold_score():
+    seg_start = np.array([0.0, 9.8, 20.0])
+    seg_end = np.array([10.0, 20.0, 30.0])
+    win_start = np.arange(0.0, 29.0, 0.2)
+    fold, touches = window_fold_membership(win_start, win_start + 1.0, seg_start, seg_end, np.array([0, 1, 2]), 3)
+    straddling = straddling_windows(touches)
+    assert straddling.any() and not straddling.all()
+    rng = np.random.default_rng(0)
+    labels = (np.arange(len(fold)) % 2).astype(np.int64)
+    features = rng.normal(size=(len(fold), 2)) + labels[:, None]
+    oof, rows = cross_validate("logistic", {"C": 1.0}, features, labels, fold, touches, 3, 0, "balanced")
+    assert np.isnan(oof[straddling]).all()
+    assert np.isfinite(oof[~straddling]).all()
+    assert sum(r["heldout_windows"] for r in rows) == int((~straddling).sum())
 
 
 def test_windows_follow_their_stream_split_and_never_leak(synthetic_cfg):

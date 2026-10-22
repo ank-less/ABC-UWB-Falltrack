@@ -48,6 +48,7 @@ from .splitting import (
     official_assignment,
     purged_training_mask,
     split_assignment_table,
+    straddling_windows,
     window_fold_membership,
 )
 from .validation import (
@@ -132,11 +133,15 @@ def git_state() -> dict:
         except (OSError, subprocess.SubprocessError):
             return None
 
-    status = run("status", "--porcelain")
+    # dirty = tracked files differ from the commit; untracked files are listed apart.
+    status = run("status", "--porcelain", "--untracked-files=no")
+    untracked = run("ls-files", "--others", "--exclude-standard")
     return {
         "commit": run("rev-parse", "HEAD"),
         "branch": run("rev-parse", "--abbrev-ref", "HEAD"),
         "dirty": bool(status) if status is not None else None,
+        "modified": status.splitlines() if status else [],
+        "untracked": untracked.splitlines() if untracked else [],
     }
 
 
@@ -324,8 +329,13 @@ def cross_validate(
     seed: int,
     class_weight,
 ) -> tuple[np.ndarray, list[dict]]:
-    """Out-of-fold scores. Fold k's model never trains on a window touching fold k."""
+    """Out-of-fold scores. Fold k's model never trains on a window touching fold k.
+
+    Windows that touch more than one fold are left unscored (NaN): every model that
+    could score them saw frames they contain.
+    """
     labelled = labels >= 0
+    straddling = straddling_windows(touches)
     oof = np.full(len(labels), np.nan)
     rows = []
     models = {}
@@ -333,7 +343,9 @@ def cross_validate(
         fit_rows = labelled & (fold >= 0) & purged_training_mask(touches, k)
         if np.any(touches[fit_rows, k]):
             raise LeakageError(f"fold {k}: a training window touches held-out subjects")
-        test_rows = fold == k
+        test_rows = (fold == k) & ~straddling
+        if np.any(touches[test_rows][:, np.arange(n_folds) != k]):
+            raise LeakageError(f"fold {k}: a held-out window touches subjects of another fold")
         if not test_rows.any() or not fit_rows.any():
             LOG.warning("%s fold %d: %d training and %d held-out windows; fold skipped", name, k, fit_rows.sum(), test_rows.sum())
             continue
@@ -359,7 +371,9 @@ def cross_validate(
                 "warnings": "; ".join(held_metrics["warnings"]),
             }
         )
-    leftover = np.isnan(oof)
+    if straddling.any():
+        LOG.info("%s: %d windows straddle two folds and stay unscored out of fold", name, straddling.sum())
+    leftover = np.isnan(oof) & ~straddling
     if leftover.any():
         if not models:
             raise RuntimeError(f"{name}: no fold could be trained")
@@ -394,15 +408,16 @@ def params_from_row(row: pd.Series) -> PostprocessParams:
 
 
 def learning_curve(
-    name, params, features, labels, fold, touches_group, group_fold_array, n_folds, fractions, seed, class_weight
+    name, params, features, labels, fold, touches, touches_group, group_fold_array, n_folds, fractions, seed, class_weight
 ) -> list[dict]:
     """Held-out window PR-AUC when training on a fraction of the training subjects."""
     rng = np.random.default_rng(seed)
     labelled = labels >= 0
+    straddling = straddling_windows(touches)
     rows = []
     for k in range(n_folds):
         train_groups = np.flatnonzero(group_fold_array != k)
-        held = (fold == k) & labelled
+        held = (fold == k) & labelled & ~straddling
         if not held.any() or len(np.unique(labels[held])) < 2:
             continue
         for fraction in fractions:
@@ -535,6 +550,8 @@ def run_train(cfg: dict, run_dir: Path) -> dict:
         "positive": int((labels == POSITIVE).sum()),
         "negative": int((labels == NEGATIVE).sum()),
         "ambiguous": int((labels < 0).sum()),
+        "straddling_folds": int(straddling_windows(touches).sum()),
+        "straddling_folds_labelled": int((straddling_windows(touches) & (labels >= 0)).sum()),
         "by_fold": {int(k): {"windows": int((fold == k).sum()), "positive": int(((fold == k) & (labels == POSITIVE)).sum())} for k in range(-1, n_folds)},
     }
     LOG.info("train windows: %s", class_balance)
@@ -590,7 +607,8 @@ def run_train(cfg: dict, run_dir: Path) -> dict:
     for name, choice in selection.items():
         post = PostprocessParams(**choice["postprocessing"])
         oof = oof_scores[name]
-        pr_curve_table(labels[labelled], oof[labelled]).to_csv(run_dir / f"pr_curve_oof_{name}.csv", index=False)
+        scored = labelled & np.isfinite(oof)
+        pr_curve_table(labels[scored], oof[scored]).to_csv(run_dir / f"pr_curve_oof_{name}.csv", index=False)
         oof_events = events_for_streams(windows, oof, post, durations)
         oof_events.to_csv(run_dir / f"event_predictions_train_oof_{name}.csv", index=False, float_format="%.3f")
         oof_report = event_report(ground, prediction_records(oof_events), durations, evaluator)
@@ -606,7 +624,7 @@ def run_train(cfg: dict, run_dir: Path) -> dict:
         model_folds = [r for r in fold_rows if r["model"] == name and r["params"] == json.dumps(choice["model_params"], sort_keys=True)]
         heldout_pr = [r["heldout_pr_auc"] for r in model_folds if r["heldout_pr_auc"] is not None]
         oof_summary[name] = {
-            "window_oof": window_metrics(labels[labelled], oof[labelled], post.threshold),
+            "window_oof": window_metrics(labels[scored], oof[scored], post.threshold),
             "window_train_insample": window_metrics(labels[labelled], train_scores[name][labelled], post.threshold),
             "fold_pr_auc_mean": float(np.mean(heldout_pr)) if heldout_pr else None,
             "fold_pr_auc_std": float(np.std(heldout_pr)) if heldout_pr else None,
@@ -631,6 +649,7 @@ def run_train(cfg: dict, run_dir: Path) -> dict:
             features,
             labels,
             fold,
+            touches,
             touches_group,
             group_fold_array,
             n_folds,

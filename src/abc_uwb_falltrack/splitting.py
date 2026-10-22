@@ -83,6 +83,16 @@ def purged_training_mask(touches: np.ndarray, held_out: int) -> np.ndarray:
     return ~touches[:, held_out]
 
 
+def straddling_windows(touches: np.ndarray) -> np.ndarray:
+    """Windows that touch more than one fold.
+
+    No out-of-fold model is clean for them: the model of each fold they touch was
+    trained on windows of the other fold, and some of those share frames with them.
+    They stay out of every held-out set, but may still train the folds they do not touch.
+    """
+    return touches.sum(axis=1) > 1
+
+
 def split_assignment_table(
     stream_split: dict[str, str], group_split: dict[str, str], group_folds: dict[str, int], seed: int, group_key: str
 ) -> pd.DataFrame:
