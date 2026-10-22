@@ -34,7 +34,8 @@ Thư mục [Google Drive của nhóm](https://drive.google.com/drive/folders/182
 | Baseline tham khảo | Energy: f1_mean 0,315. Logistic với cửa sổ 4 s: f1_mean 0,258. Cả hai được tune ngay trên val, nên không phải ước lượng điểm test. | README gói |
 | Giấy phép | CC BY-NC 4.0. Phải trích dẫn 4 bài báo nêu trong README. | LICENSE, README gói |
 | Quy định dữ liệu | **Cấm** dùng bản ghi UWB nguồn của LIARA (bộ ngã và bộ ADL gốc, hoặc bản sao bên ngoài) cho cả train lẫn suy luận. Các đội đứng đầu phải nộp code và model để kiểm tra. | README gói |
-| Quy định đội | Không giới hạn số thành viên. Chỉ supervisor được ở nhiều đội. Cấm chia sẻ code hoặc dữ liệu ra ngoài đội. Sinh viên thuộc lab tổ chức không được tham gia. | Trang Registration |
+| Quy định đội | Không giới hạn số thành viên. Chỉ supervisor được ở nhiều đội trong cùng một challenge. Sinh viên thuộc lab chủ trì hoặc lab tổ chức không được tham gia. | Trang Registration, mục A–B |
+| Chia sẻ code và dữ liệu | Nguyên văn mục C: "Private sharing of code or data outside your team is strictly prohibited." Câu tiếp theo yêu cầu các đội giữ bảo mật để cạnh tranh công bằng. Nếu một lab lập nhiều đội, các đội đó cũng phải tuân thủ quy tắc "No Private Sharing" này. | [Trang Registration](https://sites.google.com/view/abc2027-uwbfalltrack-challenge/registration), mục B–C, đọc lại ngày 2026-10-22 |
 | Paper | Tiếng Anh, 8–12 trang kể cả tài liệu tham khảo, theo format ABC. Đăng trên IJABC (J-STAGE). Ít nhất một thành viên phải trình bày. | Trang Registration |
 | Lịch | Tutorial và mở dữ liệu: 13/10/2026. Gửi test data: 20/10/2026. Đóng đăng ký: 27/10/2026. Nộp kết quả: 03/11/2026. Nộp paper: 10/11/2026. Trả review: 17/11/2026. Camera-ready: 08/12/2026. Hội nghị: 19–22/01/2027 (Sydney, hybrid). | autocare.ai/abc2027 |
 | Hỏi đáp | `abc2027@autocare.ai`, tiêu đề "ABC Challenge" | Trang FAQ |
@@ -48,6 +49,7 @@ Thư mục [Google Drive của nhóm](https://drive.google.com/drive/folders/182
 | Múi giờ của deadline challenge | Trang hội nghị chỉ ghi AoE cho các deadline của paper. |
 | Link đăng ký đúng | Trang Registration có một Google Form và một nút trỏ tới CMT của ABC2025. |
 | Có được dùng `streams_composition.csv` để chia fold khi train không | Nhóm chỉ dùng file này để chia CV theo người, không dùng làm đặc trưng. Khi suy luận trên test thì không cần đến nó. |
+| Để repo GitHub ở chế độ public có vi phạm quy định chia sẻ không | Nguyên văn chỉ cấm chia sẻ *riêng* (private) code hoặc dữ liệu ra ngoài đội, nhưng cũng yêu cầu giữ bảo mật. Repo của nhóm hiện đang public. Trong lúc chờ trả lời, nên để repo private. |
 
 ## Quyết định của nhóm
 
