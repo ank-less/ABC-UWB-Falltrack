@@ -1,57 +1,54 @@
+import os
+import glob
+import h5py
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import TensorDataset, DataLoader
 from sklearn.ensemble import RandomForestClassifier
 from typing import List, Tuple
 
-# Cấu hình hằng số theo đặc tả bài toán ABC2027 UWB-FallTrack
-FPS = 50  # 50 khung hình/giây (cách nhau 0.02s)
+# =====================================================================
+# CẤU HÌNH HẰNG SỐ & ĐƯỜNG DẪN
+# =====================================================================
+FPS = 50
 NUM_RADARS = 3
 NUM_RANGE_BINS = 368
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# THAY ĐỔI ĐƯỜNG DẪN NÀY THEO THƯ MỤC TRÊN COLAB CỦA BẠN
+DATA_DIR = "/content/drive/MyDrive/UWB_FallTrack/data"
+EVENTS_CSV = os.path.join(DATA_DIR, "streams_events.csv")
+OUTPUT_CSV = "final_predictions.csv" # Hoàn toàn không dùng tên file sample
 
 # =====================================================================
-# 0. HÀM TẠO DỮ LIỆU GIẢ LẬP (DUMMY DATA GENERATOR)
+# 1. HÀM ĐỌC DỮ LIỆU THẬT & GÁN NHÃN
 # =====================================================================
-def generate_dummy_stream(duration_sec: int = 120) -> Tuple[np.ndarray, List[Tuple[int, int]]]:
-    """
-    Tạo luồng dữ liệu CIR giả lập có kích thước (3, T, 368) kiểu float32.
-    Chèn sẵn một số đoạn có biên độ cao để mô phỏng cú ngã và hoạt động mạnh.
-    """
-    np.random.seed(42)
-    total_frames = duration_sec * FPS
-    
-    # Nhiễu nền bình thường (Gaussian noise)
-    cir_data = np.random.normal(0, 0.1, size=(NUM_RADARS, total_frames, NUM_RANGE_BINS)).astype(np.float32)
-    
-    # Chèn 4 sự kiện giả lập (bắt đầu_giây, kết_thúc_giây, cường_độ)
-    # 3 sự kiện ngã thật (dài ~1.5 - 2.2s) và 1 sự kiện nhiễu ngắn
-    simulated_events = [
-        (15.0, 16.8, 1.8),  # Cú ngã 1
-        (45.2, 47.0, 2.1),  # Cú ngã 2
-        (78.0, 78.4, 1.5),  # Nhiễu ngắn (0.4s)
-        (95.5, 97.6, 2.0),  # Cú ngã 3
-    ]
-    
-    gt_intervals = []
-    for start_s, end_s, intensity in simulated_events:
-        s_frame = int(start_s * FPS)
-        e_frame = int(end_s * FPS)
-        # Tạo tín hiệu phản xạ mạnh ở vùng khoảng cách giữa (bins 100 -> 250)
-        cir_data[:, s_frame:e_frame, 100:250] += np.random.normal(
-            0, intensity, size=(NUM_RADARS, e_frame - s_frame, 150)
-        ).astype(np.float32)
-        if (end_s - start_s) >= 1.0:
-            gt_intervals.append((s_frame, e_frame))
-            
-    return cir_data, gt_intervals
+def load_cir_from_h5(file_path: str) -> np.ndarray:
+    """Đọc mảng CIR có kích thước (3, T, 368) kiểu float32 từ tệp HDF5[cite: 1]."""
+    with h5py.File(file_path, "r") as f:
+        keys = list(f.keys())
+        cir_key = "cir" if "cir" in keys else keys[0]
+        cir_array = np.array(f[cir_key], dtype=np.float32)
+    return cir_array
 
+def check_overlap(start_f: int, end_f: int, gt_events: pd.DataFrame) -> int:
+    """Kiểm tra xem đoạn nghi vấn có chồng lấn với cú ngã thực tế nào không."""
+    if gt_events.empty:
+        return 0
+    start_s, end_s = start_f / FPS, end_f / FPS
+    for _, row in gt_events.iterrows():
+        # Lấy biên sự kiện từ file CSV[cite: 1]
+        gt_start, gt_end = row['t_start'], row['t_end']
+        # Nếu có giao cắt thời gian
+        if max(start_s, gt_start) < min(end_s, gt_end):
+            return 1
+    return 0
 
 # =====================================================================
-# 1. BƯỚC 1: BỘ LỌC NĂNG LƯỢNG (ENERGY-BASED HEURISTIC)
+# 2. BƯỚC 1: BỘ LỌC NĂNG LƯỢNG (TÌM KIẾM RỘNG)
 # =====================================================================
 def find_candidate_windows(
     cir_array: np.ndarray,
@@ -60,26 +57,16 @@ def find_candidate_windows(
     max_gap_sec: float = 0.8,
     min_duration_sec: float = 0.5
 ) -> Tuple[List[Tuple[int, int]], np.ndarray]:
-    """
-    Tìm rộng các đoạn nghi vấn dựa trên năng lượng tín hiệu phản xạ.
-    Trả về danh sách các tuple (start_frame, end_frame) và mảng năng lượng.
-    """
-    # 1. Tính năng lượng tổng hợp theo chiều khoảng cách (axis=2) -> shape: (3, T)
     energy_per_radar = np.sum(np.square(cir_array), axis=2)
-    
-    # Tổng hợp năng lượng từ 3 radar -> shape: (T,)
     total_energy = np.sum(energy_per_radar, axis=0)
     
-    # 2. Bộ lọc trung bình trượt (Moving Average) với cửa sổ 1 giây (50 frames)
     win_len = max(1, int(window_sec * FPS))
     kernel = np.ones(win_len) / win_len
     smoothed_energy = np.convolve(total_energy, kernel, mode="same")
     
-    # 3. Tìm các khung hình vượt phân vị thứ 95
     threshold = np.percentile(smoothed_energy, percentile_thresh)
     active_mask = smoothed_energy > threshold
     
-    # Xác định điểm bắt đầu và kết thúc của các đoạn vượt ngưỡng
     padded_mask = np.pad(active_mask.astype(int), (1, 1), mode="constant")
     diff = np.diff(padded_mask)
     starts = np.where(diff == 1)[0]
@@ -88,7 +75,6 @@ def find_candidate_windows(
     if len(starts) == 0:
         return [], smoothed_energy
         
-    # 4. Gộp các đoạn cách nhau dưới 0.8 giây (40 frames)
     max_gap_frames = int(max_gap_sec * FPS)
     min_dur_frames = int(min_duration_sec * FPS)
     
@@ -97,7 +83,7 @@ def find_candidate_windows(
     
     for next_start, next_end in zip(starts[1:], ends[1:]):
         if next_start - curr_end <= max_gap_frames:
-            curr_end = next_end  # Gộp đoạn
+            curr_end = next_end
         else:
             if (curr_end - curr_start) >= min_dur_frames:
                 merged_windows.append((int(curr_start), int(curr_end)))
@@ -108,19 +94,12 @@ def find_candidate_windows(
         
     return merged_windows, smoothed_energy
 
-
 # =====================================================================
-# 2. BƯỚC 2: MẠNG HỌC SÂU CNN + LSTM (ĐỊNH VỊ BIÊN CHUỖI THỜI GIAN)
+# 3. BƯỚC 2: MẠNG CNN + LSTM
 # =====================================================================
 class FallDetectorNet(nn.Module):
-    """
-    Kiến trúc CNN + BiLSTM đọc tín hiệu 3 radar:
-    - Input: (Batch, 3, seq_len, 368)
-    - Output: (Batch, seq_len) chứa xác suất ngã cho từng khung hình.
-    """
     def __init__(self, hidden_dim: int = 64):
         super().__init__()
-        # CNN 1D quét qua 368 range bins (xem 3 radar như 3 kênh đầu vào)
         self.spatial_cnn = nn.Sequential(
             nn.Conv1d(in_channels=NUM_RADARS, out_channels=16, kernel_size=7, stride=2, padding=3),
             nn.BatchNorm1d(16),
@@ -129,10 +108,8 @@ class FallDetectorNet(nn.Module):
             nn.Conv1d(in_channels=16, out_channels=32, kernel_size=5, stride=2, padding=2),
             nn.BatchNorm1d(32),
             nn.ReLU(),
-            nn.AdaptiveAvgPool1d(8)  # Đưa chiều khoảng cách về cố định 8 bins -> 32 * 8 = 256 features
+            nn.AdaptiveAvgPool1d(8)
         )
-        
-        # LSTM hai chiều đọc diễn biến theo thời gian (seq_len)
         self.temporal_lstm = nn.LSTM(
             input_size=32 * 8,
             hidden_size=hidden_dim,
@@ -140,188 +117,133 @@ class FallDetectorNet(nn.Module):
             batch_first=True,
             bidirectional=True
         )
-        
-        # Lớp phân loại cho từng khung hình
         self.classifier = nn.Sequential(
             nn.Linear(hidden_dim * 2, 1),
             nn.Sigmoid()
         )
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x shape: (Batch, 3, seq_len, 368)
         batch_size, radars, seq_len, bins = x.shape
-        
-        # Gộp Batch và seq_len để đưa qua Conv1d: (Batch * seq_len, 3, 368)
         x_reshaped = x.permute(0, 2, 1, 3).contiguous().view(batch_size * seq_len, radars, bins)
-        
-        # Trích xuất đặc trưng khoảng cách: (Batch * seq_len, 32, 8)
         cnn_feat = self.spatial_cnn(x_reshaped)
-        cnn_feat = cnn_feat.view(batch_size, seq_len, -1)  # (Batch, seq_len, 256)
-        
-        # Đưa qua LSTM: (Batch, seq_len, hidden_dim * 2)
+        cnn_feat = cnn_feat.view(batch_size, seq_len, -1)
         lstm_out, _ = self.temporal_lstm(cnn_feat)
-        
-        # Dự đoán xác suất cho từng frame: (Batch, seq_len)
         probs = self.classifier(lstm_out).squeeze(-1)
         return probs
 
-
-def train_cnn_lstm_dummy(model: nn.Module, epochs: int = 10) -> None:
-    """
-    Hàm huấn luyện minh họa cho mạng CNN+LSTM sử dụng Binary Cross Entropy (BCE).
-    Tạo một tập batch nhỏ gồm các cửa sổ 100 frames (2 giây).
-    """
+def train_cnn_lstm(model: nn.Module, train_loader: DataLoader, epochs: int = 15):
     model.to(DEVICE)
     model.train()
-    
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.BCELoss()
     
-    # Tạo 16 mẫu giả lập, mỗi mẫu dài 100 khung hình (2 giây)
-    seq_len = 100
-    dummy_x = torch.randn(16, NUM_RADARS, seq_len, NUM_RANGE_BINS, device=DEVICE)
-    dummy_y = torch.zeros(16, seq_len, device=DEVICE)
-    
-    # Giả sử nửa đầu batch có cú ngã ở khung hình 25 -> 75
-    dummy_x[:8, :, 25:75, 100:250] += 1.5
-    dummy_y[:8, 25:75] = 1.0
-    
-    print("--- Huấn luyện thử nghiệm mạng CNN + LSTM (Bước 2) ---")
+    print("\n--- Bắt đầu huấn luyện CNN + LSTM ---")
     for epoch in range(1, epochs + 1):
-        optimizer.zero_grad()
-        preds = model(dummy_x)
-        loss = criterion(preds, dummy_y)
-        loss.backward()
-        optimizer.step()
-        
-        if epoch in (1, 5, epochs):
-            print(f"Epoch [{epoch:02d}/{epochs:02d}] - BCE Loss: {loss.item():.4f}")
-
+        total_loss = 0.0
+        for batch_x, batch_y in train_loader:
+            batch_x, batch_y = batch_x.to(DEVICE), batch_y.to(DEVICE)
+            optimizer.zero_grad()
+            preds = model(batch_x)
+            
+            # Tính loss trung bình trên toàn bộ chiều dài chuỗi (seq_len)
+            # batch_y được expand để khớp với shape của preds
+            target = batch_y.unsqueeze(1).expand_as(preds)
+            loss = criterion(preds, target)
+            
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+            
+        print(f"Epoch [{epoch:02d}/{epochs:02d}] - Loss: {total_loss/len(train_loader):.4f}")
 
 # =====================================================================
-# 3. BƯỚC 3: RANDOM FOREST (TRÍCH XUẤT ĐẶC TRƯNG & LỌC NHIỄU)
+# 4. BƯỚC 3: RANDOM FOREST LỌC NHIỄU
 # =====================================================================
-def extract_features(
-    cir_segment: np.ndarray,
-    frame_probs: np.ndarray
-) -> np.ndarray:
-    """
-    Trích xuất vector đặc trưng từ một đoạn nghi vấn và xác suất của CNN+LSTM:
-    1. Thời lượng đoạn (giây)
-    2. Năng lượng tối đa
-    3. Năng lượng trung bình
-    4. Xác suất cao nhất từ CNN+LSTM
-    5. Xác suất trung bình từ CNN+LSTM
-    """
+def extract_features(cir_segment: np.ndarray, frame_probs: np.ndarray) -> np.ndarray:
     seq_len = cir_segment.shape[1]
     duration_sec = seq_len / float(FPS)
-    
-    # Năng lượng tại mỗi khung hình của đoạn
     segment_energy = np.sum(np.square(cir_segment), axis=(0, 2))
-    max_energy = float(np.max(segment_energy))
-    mean_energy = float(np.mean(segment_energy))
-    
-    max_prob = float(np.max(frame_probs))
-    mean_prob = float(np.mean(frame_probs))
-    
-    return np.array([duration_sec, max_energy, mean_energy, max_prob, mean_prob], dtype=np.float32)
-
-
-def train_random_forest_dummy() -> RandomForestClassifier:
-    """
-    Khởi tạo và huấn luyện mô hình Random Forest trên tập đặc trưng giả lập.
-    """
-    np.random.seed(42)
-    # Tạo 40 mẫu đặc trưng giả lập: [duration, max_e, mean_e, max_p, mean_p]
-    # Nhãn 0: Sinh hoạt thường ngày (ADL), Nhãn 1: Cú ngã (Fall)
-    adl_features = np.column_stack([
-        np.random.uniform(0.5, 4.0, 20),     # Thời lượng
-        np.random.uniform(10.0, 80.0, 20),   # Max energy
-        np.random.uniform(5.0, 40.0, 20),    # Mean energy
-        np.random.uniform(0.1, 0.55, 20),    # Max prob thấp
-        np.random.uniform(0.05, 0.35, 20),   # Mean prob thấp
-    ])
-    
-    fall_features = np.column_stack([
-        np.random.uniform(1.2, 2.5, 20),     # Thời lượng chuẩn của cú ngã (1.2 - 2.5s)
-        np.random.uniform(150.0, 600.0, 20), # Max energy cao
-        np.random.uniform(80.0, 300.0, 20),  # Mean energy cao
-        np.random.uniform(0.65, 0.99, 20),   # Max prob cao
-        np.random.uniform(0.45, 0.85, 20),   # Mean prob cao
-    ])
-    
-    x_train = np.vstack([adl_features, fall_features])
-    y_train = np.array([0] * 20 + [1] * 20)
-    
-    rf_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-    rf_model.fit(x_train, y_train)
-    print("\n--- Đã huấn luyện xong Random Forest (Bước 3) ---")
-    return rf_model
-
+    return np.array([
+        duration_sec,
+        float(np.max(segment_energy)),
+        float(np.mean(segment_energy)),
+        float(np.max(frame_probs)),
+        float(np.mean(frame_probs))
+    ], dtype=np.float32)
 
 # =====================================================================
-# 4. TỔNG HỢP (INFERENCE PIPELINE)
+# 5. XÂY DỰNG TẬP DỮ LIỆU & CHẠY PIPELINE
 # =====================================================================
-def refine_boundaries(
-    start_frame: int,
-    end_frame: int,
-    frame_probs: np.ndarray,
-    prob_thresh: float = 0.5
-) -> Tuple[int, int]:
-    """
-    Tinh chỉnh lại biên bắt đầu và kết thúc bên trong đoạn nghi vấn dựa vào
-    xác suất từng khung hình của mạng CNN+LSTM.
-    """
-    active_idx = np.where(frame_probs >= prob_thresh)[0]
-    if len(active_idx) >= int(0.4 * FPS):  # Ít nhất 0.4 giây
-        refined_start = start_frame + int(active_idx[0])
-        refined_end = start_frame + int(active_idx[-1])
-        return refined_start, refined_end
-    return start_frame, end_frame
+def prepare_training_data(events_df: pd.DataFrame) -> Tuple[TensorDataset, np.ndarray, np.ndarray]:
+    """Quét qua các tệp train_*.h5 để cắt đoạn nghi vấn và gán nhãn."""
+    train_files = glob.glob(os.path.join(DATA_DIR, "train_*.h5"))
+    if not train_files:
+        raise FileNotFoundError(f"Không tìm thấy file train_*.h5 trong {DATA_DIR}")
 
+    X_list, y_list = [], []
+    rf_features_list, rf_labels = [], []
+    
+    print("Đang quét dữ liệu huấn luyện (có thể mất thời gian)...")
+    for file_path in sorted(train_files):
+        stream_id = os.path.basename(file_path).replace(".h5", "")
+        stream_events = events_df[events_df["stream_id"] == stream_id]
+        
+        cir_array = load_cir_from_h5(file_path)
+        windows, _ = find_candidate_windows(cir_array)
+        
+        for s_frame, e_frame in windows:
+            label = check_overlap(s_frame, e_frame, stream_events)
+            segment = cir_array[:, s_frame:e_frame, :]
+            
+            # Padding/Truncate để tất cả tensor có cùng độ dài (ví dụ: 150 frames = 3s)
+            fixed_len = 150
+            if segment.shape[1] < fixed_len:
+                pad_width = fixed_len - segment.shape[1]
+                segment_padded = np.pad(segment, ((0,0), (0, pad_width), (0,0)), mode='constant')
+            else:
+                segment_padded = segment[:, :fixed_len, :]
+                
+            X_list.append(segment_padded)
+            y_list.append(label)
+            
+    X_tensor = torch.tensor(np.array(X_list), dtype=torch.float32)
+    y_tensor = torch.tensor(np.array(y_list), dtype=torch.float32)
+    dataset = TensorDataset(X_tensor, y_tensor)
+    
+    return dataset, X_tensor.numpy(), y_tensor.numpy()
 
-def predict_stream(
+def predict_stream_real(
     cir_array: np.ndarray,
     stream_id: str,
     dl_model: nn.Module,
     rf_model: RandomForestClassifier,
-    rf_score_thresh: float = 0.4
-) -> pd.DataFrame:
-    """
-    Chạy tuần tự 3 bước trên một luồng dữ liệu CIR (3, T, 368):
-    Bước 1 (Lọc năng lượng) -> Cắt tín hiệu -> Bước 2 (CNN+LSTM) -> Bước 3 (Random Forest).
-    Trả về DataFrame theo định dạng nộp bài.
-    """
+) -> List[dict]:
     dl_model.eval()
     predictions = []
-    
-    # Bước 1: Tìm các khoảng nghi vấn bằng năng lượng
     candidate_windows, _ = find_candidate_windows(cir_array)
-    print(f"\n[Stream: {stream_id}] Bước 1 tìm thấy {len(candidate_windows)} đoạn nghi vấn.")
     
     for s_frame, e_frame in candidate_windows:
-        # Cắt đoạn tín hiệu nghi vấn: shape (3, seq_len, 368)
         segment = cir_array[:, s_frame:e_frame, :]
+        seg_tensor = torch.from_numpy(segment).unsqueeze(0).to(DEVICE)
         
-        # Bước 2: Đưa qua mạng CNN+LSTM để lấy xác suất từng khung hình
-        seg_tensor = torch.from_numpy(segment).unsqueeze(0).to(DEVICE)  # (1, 3, seq_len, 368)
         with torch.no_grad():
             frame_probs = dl_model(seg_tensor).squeeze(0).cpu().numpy()
             
-        # Bước 3: Trích xuất đặc trưng và phân loại bằng Random Forest
         features = extract_features(segment, frame_probs).reshape(1, -1)
         fall_prob_rf = float(rf_model.predict_proba(features)[0, 1])
-        
-        # Kết hợp điểm tin cậy từ Random Forest và CNN+LSTM
         combined_score = 0.6 * fall_prob_rf + 0.4 * float(np.max(frame_probs))
         
-        if combined_score >= rf_score_thresh:
-            # Tinh chỉnh biên thời gian
-            ref_start, ref_end = refine_boundaries(s_frame, e_frame, frame_probs)
-            t_start = round(ref_start / float(FPS), 2)
-            t_end = round(ref_end / float(FPS), 2)
+        if combined_score >= 0.4:
+            active_idx = np.where(frame_probs >= 0.5)[0]
+            if len(active_idx) > 0:
+                ref_start = s_frame + int(active_idx[0])
+                ref_end = s_frame + int(active_idx[-1])
+            else:
+                ref_start, ref_end = s_frame, e_frame
+                
+            t_start = round(ref_start / FPS, 2)
+            t_end = round(ref_end / FPS, 2)
             
-            # Đảm bảo t_start < t_end hợp lệ theo quy tắc chấm
             if t_end > t_start:
                 predictions.append({
                     "stream_id": stream_id,
@@ -329,43 +251,53 @@ def predict_stream(
                     "t_end": t_end,
                     "score": round(combined_score, 4)
                 })
-                
-    df_sub = pd.DataFrame(predictions, columns=["stream_id", "t_start", "t_end", "score"])
-    # Sắp xếp theo điểm tin cậy giảm dần giống quy tắc ghép cặp của bộ chấm
-    if not df_sub.empty:
-        df_sub = df_sub.sort_values(by="score", ascending=False).reset_index(drop=True)
-    return df_sub
+    return predictions
 
-
-# =====================================================================
-# CHẠY THỬ NGHIỆM TOÀN BỘ PIPELINE TRÊN GOOGLE COLAB
-# =====================================================================
 if __name__ == "__main__":
-    print(f"Đang chạy trên thiết bị: {DEVICE}")
-    
-    # 1. Tạo dữ liệu luồng radar giả lập dài 120 giây (6000 frames)
-    dummy_cir, gt_events = generate_dummy_stream(duration_sec=120)
-    print(f"Kích thước mảng CIR giả lập: {dummy_cir.shape} (3 radar, T khung hình, 368 bins)")
-    print(f"Các cú ngã thực tế đã chèn (giây): {[(s/FPS, e/FPS) for s, e in gt_events]}\n")
-    
-    # 2. Khởi tạo và huấn luyện mô hình Bước 2 (CNN + LSTM)
-    cnn_lstm_net = FallDetectorNet(hidden_dim=64)
-    train_cnn_lstm_dummy(cnn_lstm_net, epochs=10)
-    
-    # 3. Khởi tạo và huấn luyện mô hình Bước 3 (Random Forest)
-    rf_classifier = train_random_forest_dummy()
-    
-    # 4. Chạy dự đoán trên luồng dữ liệu val_00
-    submission_df = predict_stream(
-        cir_array=dummy_cir,
-        stream_id="val_00",
-        dl_model=cnn_lstm_net,
-        rf_model=rf_classifier
-    )
-    
-    print("\n--- KẾT QUẢ ĐẦU RA (ĐỊNH DẠNG SUBMISSION) ---")
-    print(submission_df.to_string(index=False))
-    
-    # Xuất ra file CSV
-    submission_df.to_csv("sample_submission_output.csv", index=False)
-    print("\nĐã lưu kết quả vào file 'sample_submission_output.csv'.")
+    if not os.path.exists(EVENTS_CSV):
+        print(f"LỖI: Vui lòng đặt file streams_events.csv vào thư mục {DATA_DIR}")
+    else:
+        # 1. Đọc bảng sự kiện để lấy nhãn biên chính xác[cite: 1]
+        events_df = pd.read_csv(EVENTS_CSV)
+        
+        # 2. Chuẩn bị dữ liệu huấn luyện từ các file train_*.h5
+        train_dataset, X_numpy, y_numpy = prepare_training_data(events_df)
+        train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+        
+        # 3. Khởi tạo & Huấn luyện CNN+LSTM
+        cnn_lstm_model = FallDetectorNet(hidden_dim=64)
+        train_cnn_lstm(cnn_lstm_model, train_loader, epochs=10)
+        
+        # 4. Huấn luyện Random Forest
+        print("\n--- Đang trích xuất đặc trưng cho Random Forest ---")
+        cnn_lstm_model.eval()
+        rf_features = []
+        with torch.no_grad():
+            for i in range(len(X_numpy)):
+                seg_tensor = torch.from_numpy(X_numpy[i]).unsqueeze(0).to(DEVICE)
+                probs = cnn_lstm_model(seg_tensor).squeeze(0).cpu().numpy()
+                rf_features.append(extract_features(X_numpy[i], probs))
+                
+        rf_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+        rf_model.fit(np.array(rf_features), y_numpy)
+        print("Huấn luyện Random Forest thành công.")
+        
+        # 5. Chạy suy luận (Inference) trên tập Validation
+        val_files = glob.glob(os.path.join(DATA_DIR, "val_*.h5"))
+        all_predictions = []
+        
+        print("\n--- Đang dự đoán trên tập Validation ---")
+        for val_file in sorted(val_files):
+            stream_id = os.path.basename(val_file).replace(".h5", "")
+            cir_val = load_cir_from_h5(val_file)
+            preds = predict_stream_real(cir_val, stream_id, cnn_lstm_model, rf_model)
+            all_predictions.extend(preds)
+            print(f"Đã xử lý xong {stream_id}")
+            
+        # 6. Xuất kết quả
+        final_df = pd.DataFrame(all_predictions)
+        if not final_df.empty:
+            final_df = final_df.sort_values(by="score", ascending=False).reset_index(drop=True)
+            
+        final_df.to_csv(OUTPUT_CSV, index=False)
+        print(f"\nHoàn thành! Đã lưu kết quả tại: {OUTPUT_CSV}")
